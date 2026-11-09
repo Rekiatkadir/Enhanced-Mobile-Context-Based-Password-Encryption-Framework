@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Bank Mobile - Transfer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-100 max-w-sm w-full overflow-hidden flex flex-col min-h-[640px]">
+        <!-- Page Header -->
+        <div class="bg-gradient-to-tr from-indigo-800 to-indigo-950 px-6 py-6 text-white flex items-center space-x-3">
+            <a href="{{ url_for('dashboard') }}" class="p-2.5 bg-white/10 rounded-xl hover:bg-white/20 transition border border-white/10">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </a>
+            <h1 class="text-lg font-bold">Secure Fund Transfer</h1>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="px-6 pt-4 space-y-2">
+            {% for category, message in messages %}
+            <div class="text-xs rounded-xl px-3 py-2 border {% if category == 'error' %}bg-rose-50 border-rose-200 text-rose-700{% else %}bg-emerald-50 border-emerald-200 text-emerald-700{% endif %}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <form id="transfer_form" action="{{ url_for('transfer') }}" method="POST" class="p-6 flex-1 flex flex-col justify-between">
+            <input type="hidden" name="pin_entry_seconds" id="pin_entry_seconds" value="0">
+            <input type="hidden" name="pin" id="pin_hidden" value="">
+            <div class="space-y-4">
+                <!-- Standard Transfer Details -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Recipient Full Name</label>
+                    <input type="text" id="recipient_name" name="recipient_name" readonly placeholder="Filled from account number"
+                           class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none transition text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Receiver Account Number</label>
+                    <input type="text" id="recipient_account" name="recipient_account" required inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="4758219630"
+                           title="Enter the 10-digit account number (numbers only)"
+                           class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 transition text-sm font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Amount ($)</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-3 text-slate-400 font-bold">$</span>
+                        <input type="number" step="0.01" name="amount" required placeholder="0.00"
+                               class="w-full pl-8 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 transition text-sm font-semibold">
+                    </div>
+                </div>
+
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-indigo-150 transition active:scale-[0.98] mt-6">
+                <span>Encrypt & Transfer</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    <!-- PIN entry pop-up (shown only after transfer details are submitted) -->
+    <div id="pin_modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xs p-6 text-center">
+            <div class="mx-auto h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            <h2 class="mt-3 text-base font-bold text-slate-800">Enter Transfer PIN</h2>
+            <p class="mt-1 text-xs text-slate-500">Enter your 4-digit PIN to authorize this transfer.</p>
+            <input type="password" id="transfer_pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" autocomplete="off"
+                   class="mt-4 w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 transition text-center text-xl font-mono tracking-[0.5em]">
+            <p id="pin_error" class="mt-2 text-[11px] text-rose-600 hidden">PIN must be exactly 4 digits.</p>
+            <div class="mt-5 grid grid-cols-2 gap-3">
+                <button type="button" id="pin_cancel"
+                        class="py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition">Cancel</button>
+                <button type="button" id="pin_confirm"
+                        class="py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition">Confirm</button>
+            </div>
+        </div>
+    </div>
+<script>
+    // Looks up the receiver name when a 10-digit account number is entered or pasted
+    (function () {
+        var accInput = document.getElementById('recipient_account');
+        var nameInput = document.getElementById('recipient_name');
+        var lastLookup = '';
+        function lookup() {
+            var acc = accInput.value.trim();
+            if (acc.length !== 10 || !/^[0-9]{10}$/.test(acc)) {
+                nameInput.value = '';
+                lastLookup = '';
+                return;
+            }
+            if (acc === lastLookup) return;
+            lastLookup = acc;
+            fetch('{{ url_for("lookup_account") }}?account=' + encodeURIComponent(acc), { credentials: 'same-origin' })
+                .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+                .then(function (res) {
+                    if (accInput.value.trim() !== acc) return; // input changed while waiting
+                    nameInput.value = res.ok ? res.data.name : '';
+                    nameInput.placeholder = res.ok ? '' : res.data.error;
+                })
+                .catch(function () { nameInput.value = ''; });
+        }
+        accInput.addEventListener('input', lookup);
+        accInput.addEventListener('paste', function () { setTimeout(lookup, 0); });
+    })();
+</script>
+<script>
+    // Shows the PIN pop-up after the details are submitted, then measures
+    // PIN entry duration from pop-up opening to confirm.
+    (function () {
+        var form = document.getElementById('transfer_form');
+        var modal = document.getElementById('pin_modal');
+        var pinInput = document.getElementById('transfer_pin');
+        var pinHidden = document.getElementById('pin_hidden');
+        var pinSeconds = document.getElementById('pin_entry_seconds');
+        var pinError = document.getElementById('pin_error');
+        var startedAt = null;
+
+        function openModal() {
+            pinInput.value = '';
+            pinHidden.value = '';
+            pinError.classList.add('hidden');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            startedAt = Date.now();
+            setTimeout(function () { pinInput.focus(); }, 50);
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            pinInput.value = '';
+            startedAt = null;
+        }
+
+        form.addEventListener('submit', function (e) {
+            if (pinHidden.value) return;  // already confirmed -> allow submit
+            e.preventDefault();           // details are valid -> ask for PIN
+            openModal();
+        });
+
+        document.getElementById('pin_cancel').addEventListener('click', closeModal);
+
+        var confirmBtn = document.getElementById('pin_confirm');
+
+        function showError(msg) {
+            pinError.textContent = msg;
+            pinError.classList.remove('hidden');
+        }
+
+        function resetConfirmBtn() {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirm';
+        }
+
+        function confirmPin() {
+            var pin = pinInput.value.trim();
+            if (!/^[0-9]{4}$/.test(pin)) {
+                showError('PIN must be exactly 4 digits.');
+                return;
+            }
+            pinError.classList.add('hidden');
+            pinHidden.value = pin;
+            pinSeconds.value = startedAt === null ? 0 : ((Date.now() - startedAt) / 1000).toFixed(2);
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Verifying...';
+
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function (r) {
+                if (r.redirected && r.url.indexOf('/login') !== -1) {
+                    window.location.href = r.url;   // session expired
+                    return null;
+                }
+                return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+            })
+            .then(function (res) {
+                if (!res) return;
+                if (res.ok && res.data.redirect) {
+                    window.location.href = res.data.redirect;
+                    return;
+                }
+                showError((res.data && res.data.error) || 'Transfer failed. Please try again.');
+                pinInput.value = '';
+                pinInput.focus();
+                startedAt = Date.now();  // restart PIN entry timing for the retry
+                resetConfirmBtn();
+            })
+            .catch(function () {
+                showError('Network error. Please try again.');
+                resetConfirmBtn();
+            });
+        }
+
+        document.getElementById('pin_confirm').addEventListener('click', confirmPin);
+        pinInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); confirmPin(); }
+        });
+    })();
+</script>
+</body>
+</html>

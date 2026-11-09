@@ -1,0 +1,6 @@
+{
+  "name": "CBIF",
+  "description": "A high-performance simulated mobile banking application integrating real-time ML fraud detection (SMOTE and Isolation Forest) with context-based dual PBKDF2 cryptography.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
